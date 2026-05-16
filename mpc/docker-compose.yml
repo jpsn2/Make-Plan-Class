@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # Web Application
+  web:
+    build: .
+    container_name: mpc-web
+    environment:
+      FLASK_APP: app.py
+      FLASK_ENV: ${FLASK_ENV:-development}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-mpc_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mpc_password}
+      DB_NAME: ${DB_NAME:-mpc_db}
+      DATABASE_URL: mysql+pymysql://${DB_USER:-mpc_user}:${DB_PASSWORD:-mpc_password}@${DB_HOST:-host.docker.internal}:${DB_PORT:-3306}/${DB_NAME:-mpc_db}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/app
+    networks:
+      - mpc-network
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  mpc-network:
+    driver: bridge
