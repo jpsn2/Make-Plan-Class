@@ -1,8 +1,25 @@
-class Plan():
-    def __init__(self, plan_id: int, 
-                 user_id: int, title: str, objective: str, 
-                 resume: str, pre_data: str, discipline: str, 
-                 content: str, resources: str, tags: str):
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+
+class Plan(db.Model):
+    __tablename__ = 'plans'
+    
+    plan_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    objective = db.Column(db.String(255))
+    resume = db.Column(db.Text)
+    pre_data = db.Column(db.String(255))
+    discipline = db.Column(db.String(255))
+    content = db.Column(db.Text)
+    resources = db.Column(db.String(255))
+    tags = db.Column(db.String(255))
+
+    def __init__(self, user_id: int, title: str, objective: str = None,
+                 resume: str = None, pre_data: str = None, discipline: str = None,
+                 content: str = None, resources: str = None, tags: str = None, plan_id: int = None):
         self.plan_id = plan_id
         self.user_id = user_id
         self.title = title

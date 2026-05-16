@@ -4,6 +4,8 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 import os
 
+from modules.plan import Plan, db
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -16,7 +18,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Initialize extensions
-db = SQLAlchemy(app)
+db.init_app(app)
 migrate = Migrate(app, db)
 
 # Health check endpoint
@@ -28,6 +30,35 @@ def health():
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({'message': 'Make-Plan-Class API'}), 200
+
+@app.route('/create_plan', methods=['POST'])
+def create_plan():
+    data = request.get_json()
+    
+    plan = Plan(
+        plan_id=data.get('plan_id'),
+        user_id=data.get('user_id'),
+        title=data.get('title'),
+        objective=data.get('objective'),
+        resume=data.get('resume'),
+        pre_data=data.get('pre_data'),
+        discipline=data.get('discipline'),
+        content=data.get('content'),
+        resources=data.get('resources'),
+        tags=data.get('tags')
+    )
+    
+    db.session.add(plan)
+    db.session.commit()
+    
+    return jsonify({'message': 'Plan created successfully', 'plan': data}), 201
+
+@app.route('/plans', methods=['GET'])
+def get_plans():
+    data = request.get_json()
+    plans = data.get('plan_id')
+    
+    return jsonify({'plans': plans}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
