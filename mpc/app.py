@@ -1,18 +1,17 @@
-from flask import Flask, render_template, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, request, jsonify
 from flask_migrate import Migrate
+from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 import os
 
 from modules.plan import Plan, db
+from modules.user import User
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Configure app from environment variables
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -31,38 +30,85 @@ def health():
 def index():
     return jsonify({'message': 'Make-Plan-Class API'}), 200
 
+@app.route('/create_user', methods=['POST'])
+def create_user():
+    data = request.get_json(silent=True) or {}
+
+    if not data.get('username'):
+        return jsonify({'error': 'username is required'}), 400
+    
+    user = User(username=data['username'])
+    
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to create user', 'details': str(exc)}), 500
+    
+    return jsonify({'message': 'User created successfully', 'user': {'user_id': user.user_id, 'username': user.username}}), 201
+
 @app.route('/create_plan', methods=['POST'])
 def create_plan():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+
+    if not data.get('title'):
+        return jsonify({'error': 'title is required'}), 400
     
     plan = Plan(
-        plan_id=data.get('plan_id'),
-        user_id=data.get('user_id'),
-        title=data.get('title'),
-        objective=data.get('objective'),
-        resume=data.get('resume'),
-        pre_data=data.get('pre_data'),
-        discipline=data.get('discipline'),
-        content=data.get('content'),
-        resources=data.get('resources'),
-        tags=data.get('tags')
+        user_id=data['user_id'],
+        title=data['title'],
+        objective=data['objective'],
+        resume=data['resume'],
+        pre_data=data['pre_data'],
+        discipline=data['discipline'],
+        content=data['content'],
+        resources=data['resources'],
     )
     
-    db.session.add(plan)
-    db.session.commit()
+    try:
+        db.session.add(plan)
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to create plan', 'details': str(exc)}), 500
     
-    return jsonify({'message': 'Plan created successfully', 'plan': data}), 201
+    return jsonify({'message': 'Plan created successfully', 'plan': plan.to_dict()}), 201
+
+@app.route('/users', methods=['GET'])
+def get_users():
+    try:
+        users = User.query.all()
+        result = [{'user_id': user.user_id, 'username': user.username} for user in users]
+        return jsonify({'users': result}), 200
+    except SQLAlchemyError as exc:
+        return jsonify({'error': 'Failed to list users', 'details': str(exc)}), 500
 
 @app.route('/plans', methods=['GET'])
 def get_plans():
-    plans = Plan.query.all()
-    result = [plan.to_dict() for plan in plans]
-    return jsonify({'plans': result}), 200
+    try:
+        plans = Plan.query.all()
+        result = [plan.to_dict() for plan in plans]
+        return jsonify({'plans': result}), 200
+    except SQLAlchemyError as exc:
+        return jsonify({'error': 'Failed to list plans', 'details': str(exc)}), 500
+
+@app.route('/user/<int:user_id>/plans', methods=['GET'])
+def get_user_plans(user_id):
+    try:
+        plans = Plan.query.filter_by(user_id=user_id).all()
+        result = [plan.to_dict() for plan in plans]
+        return jsonify({'plans': result}), 200
+    except SQLAlchemyError as exc:
+        return jsonify({'error': 'Failed to list user plans', 'details': str(exc)}), 500
 
 if __name__ == '__main__':
     # Inicializar banco de dados e tabelas
     with app.app_context():
-        db.create_all()
-        print('✅ Database tables initialized!')
+        try:
+            db.create_all()
+            print('Database tables initialized.')
+        except Exception as exc:
+            print(f'Database initialization failed: {exc}')
     
     app.run(debug=True, host='0.0.0.0', port=5000)
