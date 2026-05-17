@@ -6,6 +6,9 @@ db = SQLAlchemy()
 
 class Plan(db.Model):
     __tablename__ = 'plans'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'title', name='unique_user_plan_title'),
+    )
     
     plan_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
@@ -17,9 +20,9 @@ class Plan(db.Model):
     content = db.Column(db.Text)
     resources = db.Column(db.String(255))
 
-    def __init__(self, title: str, objective: str = None,
-                 resume: str = None, pre_data: str = None, discipline: str = None,
-                 content: str = None, resources: str = None, user_id: int = None):
+    def __init__(self, title: str, objective: str = "",
+                 resume: str = "", pre_data: str = "", discipline: str = "",
+                 content: str = "", resources: str = "", user_id: int = None):
         self.user_id = user_id
         self.title = title
         self.objective = objective

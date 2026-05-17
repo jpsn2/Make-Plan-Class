@@ -102,6 +102,15 @@ def get_user_plans(user_id):
     except SQLAlchemyError as exc:
         return jsonify({'error': 'Failed to list user plans', 'details': str(exc)}), 500
 
+@app.route('/users/<int:user_id>/plans/<string:title>', methods=['GET'])
+def get_user_plan_by_title(user_id, title):
+    plan = Plan.query.filter_by(user_id=user_id, title=title).first()
+
+    if not plan:
+        return jsonify({'error': 'Plan not found'}), 404
+
+    return jsonify({'plan': plan.to_dict()}), 200
+
 if __name__ == '__main__':
     # Inicializar banco de dados e tabelas
     with app.app_context():
