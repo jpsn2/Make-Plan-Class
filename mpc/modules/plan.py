@@ -33,3 +33,17 @@ class Plan(db.Model):
 
     def __str__(self):
         return f"Plan(id={self.plan_id}, user_id={self.user_id}, title='{self.title}', objective='{self.objective}')"
+
+    def to_dict(self):
+        return {
+            'plan_id': self.plan_id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'objective': self.objective,
+            'resume': self.resume,
+            'pre_data': self.pre_data,
+            'discipline': self.discipline,
+            'content': self.content,
+            'resources': self.resources,
+            'tags': self.tags,
+        }

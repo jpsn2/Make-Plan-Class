@@ -55,10 +55,14 @@ def create_plan():
 
 @app.route('/plans', methods=['GET'])
 def get_plans():
-    data = request.get_json()
-    plans = data.get('plan_id')
-    
-    return jsonify({'plans': plans}), 200
+    plans = Plan.query.all()
+    result = [plan.to_dict() for plan in plans]
+    return jsonify({'plans': result}), 200
 
 if __name__ == '__main__':
+    # Inicializar banco de dados e tabelas
+    with app.app_context():
+        db.create_all()
+        print('✅ Database tables initialized!')
+    
     app.run(debug=True, host='0.0.0.0', port=5000)
