@@ -54,18 +54,18 @@ function PlansPage() {
 
             <ul>
                 {plansOfPage.map(plan => (
-                    <li key={plan.id}>
+                    <li key={plan.plan_id}>
                         <strong>{plan.title}</strong> - {plan.discipline}
                     </li>
                 ))}
             </ul>
 
             <div>
-                <button onClick={() => setPagina(p => p - 1)} disabled={page === 1}>
+                <button onClick={() => setPage(p => p - 1)} disabled={page === 1}>
                     Anterior
                 </button>
                 <span> Página {page} de {totalPages}</span>
-                <button onCLick={() => setPagina(p => p + 1)} disabled={page === totalPages}>
+                <button onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
                     Próxima
                 </button>
             </div>
