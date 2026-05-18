@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 import os
 import litellm
+from litellm.exceptions import RateLimitError
 
 from modules.plan import Plan, db
 from modules.user import User
@@ -42,25 +43,39 @@ def chat(user_id, title):
     mensagem = data.get("message")
 
     if not mensagem:
-        return jsonify({"error": "message é obrigatório"}), 400
+        return jsonify({"error": "message Ã© obrigatÃ³rio"}), 400
 
-    # Adiciona a mensagem do usuário ao histórico
+    # Adiciona a mensagem do usuÃ¡rio ao histÃ³rico
     plan.add_history(f"user: {mensagem}")
-    historico = [{"role": "user", "content": mensagem}]
+    historico = [
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": mensagem}]
+        }
+    ]
 
-    response = litellm.completion(
-        model=f"{os.getenv('LLM_OPENAI')}/{os.getenv('LLM_MODEL_OPENAI')}",
-        messages=[
-            {"role": "system", "content": "Assistente Pedagógico."},
-            *historico
-        ]
-    )
+    try:
+        response = litellm.completion(
+            model=f"{os.getenv('LLM_ANTHROPIC')}/{os.getenv('LLM_MODEL_ANTHROPIC')}",
+            messages=[
+                {
+                    "role": "system",
+                    "content": [{"type": "text", "text": "Assistente Pedagogico."}]
+                },
+                *historico
+            ],
+            max_tokens=int(os.getenv('LLM_MAX_TOKENS', 500)),
+        )
+    except RateLimitError:
+        return jsonify({"error": "LLM quota exceeded. Check your OpenAI billing/quota."}), 429
+    except Exception as exc:
+        return jsonify({"error": "Failed to call LLM", "details": str(exc)}), 500
 
     choice = response["choices"][0] if isinstance(response, dict) else response.choices[0]
     message = choice["message"] if isinstance(choice, dict) else choice.message
     resposta = message["content"] if isinstance(message, dict) else message.content
 
-    # Adiciona a resposta da IA ao histórico
+    # Adiciona a resposta da IA ao histÃ³rico
     historico.append({"role": "assistant", "content": resposta})
     plan.add_history(f"assistant: {resposta}")
 
