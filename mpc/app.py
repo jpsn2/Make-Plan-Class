@@ -3,6 +3,7 @@ from flask_migrate import Migrate
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 import os
+import litellm
 
 from modules.plan import Plan, db
 from modules.user import User
@@ -29,6 +30,41 @@ def health():
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({'message': 'Make-Plan-Class API'}), 200
+
+@app.route("/users/<int:user_id>/plans/<string:title>/chat", methods=["POST"])
+def chat(user_id, title):
+    plan = Plan.query.filter_by(user_id=user_id, title=title).first()
+
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    mensagem = data.get("message")
+
+    if not mensagem:
+        return jsonify({"error": "message é obrigatório"}), 400
+
+    # Adiciona a mensagem do usuário ao histórico
+    plan.add_history(f"user: {mensagem}")
+    historico = [{"role": "user", "content": mensagem}]
+
+    response = litellm.completion(
+        model=f"{os.getenv('LLM_OPENAI')}/{os.getenv('LLM_MODEL_OPENAI')}",
+        messages=[
+            {"role": "system", "content": "Assistente Pedagógico."},
+            *historico
+        ]
+    )
+
+    choice = response["choices"][0] if isinstance(response, dict) else response.choices[0]
+    message = choice["message"] if isinstance(choice, dict) else choice.message
+    resposta = message["content"] if isinstance(message, dict) else message.content
+
+    # Adiciona a resposta da IA ao histórico
+    historico.append({"role": "assistant", "content": resposta})
+    plan.add_history(f"assistant: {resposta}")
+
+    return jsonify({"response": resposta})
 
 @app.route('/create_user', methods=['POST'])
 def create_user():

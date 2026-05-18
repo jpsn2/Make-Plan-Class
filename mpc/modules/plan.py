@@ -19,6 +19,7 @@ class Plan(db.Model):
     discipline = db.Column(db.String(255))
     content = db.Column(db.Text)
     resources = db.Column(db.String(255))
+    history = db.Column(db.JSON, default=list)
 
     def __init__(self, title: str, objective: str = "",
                  resume: str = "", pre_data: str = "", discipline: str = "",
@@ -31,6 +32,7 @@ class Plan(db.Model):
         self.discipline = discipline
         self.content = content
         self.resources = resources
+        self.history = []
 
     def set_title(self, title: str):
         self.title = title
@@ -60,6 +62,13 @@ class Plan(db.Model):
         self.resources = resources
         db.session.commit()
     
+    def add_history(self, entry: str):
+        if self.history is None:
+            self.history = []
+        self.history.append(entry)
+        self.history = list(self.history)
+        db.session.commit()
+    
     def __str__(self):
         return f"Plan(id={self.plan_id}, user_id={self.user_id}, title='{self.title}', objective='{self.objective}')"
 
@@ -73,5 +82,6 @@ class Plan(db.Model):
             'pre_data': self.pre_data,
             'discipline': self.discipline,
             'content': self.content,
-            'resources': self.resources
+            'resources': self.resources,
+            'history': self.history
         }
