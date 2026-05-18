@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm.attributes import flag_modified
 
 
 db = SQLAlchemy()
@@ -63,10 +64,10 @@ class Plan(db.Model):
         db.session.commit()
     
     def add_history(self, entry: str):
-        if self.history is None:
-            self.history = []
-        self.history.append(entry)
-        self.history = list(self.history)
+        history = list(self.history or [])
+        history.append(entry)
+        self.history = history
+        flag_modified(self, "history")
         db.session.commit()
     
     def __str__(self):
