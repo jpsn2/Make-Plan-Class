@@ -22,6 +22,32 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-pro
 db.init_app(app)
 migrate = Migrate(app, db)
 
+def normalize_chat_message(message):
+    if isinstance(message, str):
+        return message.strip()
+
+    if isinstance(message, dict):
+        content = message.get("content")
+        details = []
+
+        if content:
+            details.append(str(content))
+
+        labels = {
+            "discipline": "Disciplina",
+            "resume": "Resumo",
+            "title": "Titulo",
+        }
+
+        for key, label in labels.items():
+            value = message.get(key)
+            if value:
+                details.append(f"{label}: {value}")
+
+        return "\n".join(details).strip()
+
+    return ""
+
 # Health check endpoint
 @app.route('/health', methods=['GET'])
 def health():
@@ -40,10 +66,10 @@ def chat(user_id, title):
         return jsonify({"error": "Plan not found"}), 404
 
     data = request.get_json(silent=True) or {}
-    mensagem = data.get("message")
+    mensagem = normalize_chat_message(data.get("message"))
 
     if not mensagem:
-        return jsonify({"error": "message Ã© obrigatÃ³rio"}), 400
+        return jsonify({"error": "No message provided"}), 400
 
     # Adiciona a mensagem do usuÃ¡rio ao histÃ³rico
     plan.add_history(f"user: {mensagem}")
@@ -56,15 +82,15 @@ def chat(user_id, title):
 
     try:
         response = litellm.completion(
-            model=f"{os.getenv('LLM_ANTHROPIC')}/{os.getenv('LLM_MODEL_ANTHROPIC')}",
+            model=f"{os.getenv('LLM_OPENAI')}/{os.getenv('LLM_MODEL_OPENAI')}",
             messages=[
                 {
                     "role": "system",
-                    "content": [{"type": "text", "text": "Assistente Pedagogico."}]
+                    "content": [{"type": "text", "text": "Assistente Pedagogico. Fazendo o seguinte: sugestões de conteúdos complementares, tópicos relacionados e 3 tags recomendadas."}]
                 },
                 *historico
             ],
-            max_tokens=int(os.getenv('LLM_MAX_TOKENS', 500)),
+            #max_tokens=int(os.getenv('LLM_MAX_TOKENS', 500)),
         )
     except RateLimitError:
         return jsonify({"error": "LLM quota exceeded. Check your OpenAI billing/quota."}), 429
