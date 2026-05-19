@@ -245,14 +245,11 @@ function PlansPage({ reloadKey }) {
                         <label>Recursos</label>
                         <input name="resources" value={form.resources} onChange={handleChange} />
                     </div>
-                    
-                    {selectedPlan && (
-                        <button className="btn btn-ai" type="button" onClick={handleAi} disabled={loading}>
-                            {loading ? 'Gerando...' : 'Gerar outra recomendação'}
-                        </button>
-                        )}
 
                     <div className="plan-actions">
+                        <button className="btn btn-ai_again" type="button" onClick={handleAi} disabled={saving && loading}>
+                            {loading ? 'Gerando...' : 'Gerar outra recomendação'}
+                        </button>
                         <button className="btn btn-primary" type="button" onClick={handleUpdate} disabled={saving}>
                             {saving ? 'Salvando...' : 'Atualizar'}
                         </button>
