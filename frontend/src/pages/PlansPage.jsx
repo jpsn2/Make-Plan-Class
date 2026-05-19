@@ -3,7 +3,7 @@ import client from '../api/client'
 
 const ITEMS_POR_PAGINA = 5
 
-function PlansPage() {
+function PlansPage({ onSelectPlan }) {
     const [plans, setPlans] = useState([])
     const [filter, setfilter] = useState('')
     const [page, setPage] = useState(1)
@@ -52,13 +52,15 @@ function PlansPage() {
 
             {plansOfPage.length === 0 && <p>Nenhum plano encontrado!</p>}
 
-            <ul>
-                {plansOfPage.map(plan => (
-                    <li key={plan.plan_id}>
-                        <strong>{plan.title}</strong> - {plan.discipline}
-                    </li>
-                ))}
-            </ul>
+        <ul> 
+            {plansOfPage.map(plan => (
+                <li key={plan.plan_id} onClick={() => onSelectPlan(plan)}>
+                <strong>{plan.title}</strong> - {plan.discipline}
+            </li>
+            ))}
+        </ul>
+            
+            
 
             <div>
                 <button onClick={() => setPage(p => p - 1)} disabled={page === 1}>

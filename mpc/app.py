@@ -100,7 +100,7 @@ def chat(user_id, title):
     choice = response["choices"][0] if isinstance(response, dict) else response.choices[0]
     message = choice["message"] if isinstance(choice, dict) else choice.message
     resposta = message["content"] if isinstance(message, dict) else message.content
-
+    plan.set_content(resposta)
     # Adiciona a resposta da IA ao histÃ³rico
     historico.append({"role": "assistant", "content": resposta})
     plan.add_history(f"assistant: {resposta}")
