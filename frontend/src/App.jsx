@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './App.css'
-import PlanForm from './pages/PlanForm';
-import PlansPage from './pages/PlansPage';
+import PlanForm from './pages/PlanForm'
+import PlansPage from './pages/PlansPage'
 
 function App() {
   const [plansReloadKey, setPlansReloadKey] = useState(0)
@@ -11,11 +11,16 @@ function App() {
   }
 
   return (
-    <div>
-      <h1>Make Plan Class</h1>
-      <PlanForm onPlanCreated={handlePlanCreated} />
-      <PlansPage reloadKey={plansReloadKey} />
-    </div>
+    <>
+      <header className="app-header">
+        <h1>Make Plan Class</h1>
+        <p>Gerencie seus planos de aula com inteligência</p>
+      </header>
+      <main className="app-main">
+        <PlanForm onPlanCreated={handlePlanCreated} />
+        <PlansPage reloadKey={plansReloadKey} />
+      </main>
+    </>
   )
 }
 

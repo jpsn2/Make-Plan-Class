@@ -15,45 +15,40 @@ function PlanForm({ onPlanCreated }) {
     const [errors, setErrors] = useState({})
     const [success, setSuccess] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [selectedPlan, setSelectedPlan] = useState(null)
+    const [aiLoading, setAiLoading] = useState(false)
+    const [createdPlan, setCreatedPlan] = useState(null)
 
     function handleChange(e) {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
 
     function handleAi() {
-        if (!selectedPlan) {
-            setErrors({ geral: 'Crie um plano antes de gerar recomendacoes.' })
+        if (!createdPlan) {
+            setErrors({ geral: 'Crie o plano primeiro para gerar recomendações.' })
             return
         }
 
         setErrors({})
-        setLoading(true)
+        setAiLoading(true)
 
         client.get('/recommendations', {
-            data: { title: selectedPlan.title },
-            params: { title: selectedPlan.title },
+            params: { title: createdPlan.title }
         })
             .then(res => {
-                const updatedPlan = res.data.plan
-
-                setSelectedPlan(updatedPlan)
-                setForm(prev => ({ ...prev, content: updatedPlan.content }))
-                setLoading(false)
+                setForm(prev => ({ ...prev, content: res.data.response }))
+                setAiLoading(false)
             })
             .catch(() => {
-                setErrors({ geral: 'Erro ao gerar recomendacoes.' })
-                setLoading(false)
+                setErrors({ geral: 'Erro ao gerar recomendações.' })
+                setAiLoading(false)
             })
     }
 
     function validate() {
         const newErrors = {}
-
-        if (!form.title) newErrors.title = 'Titulo e obrigatorio'
-        if (!form.resume) newErrors.resume = 'Resumo e obrigatorio'
-        if (!form.discipline) newErrors.discipline = 'Disciplina e obrigatoria'
-
+        if (!form.title) newErrors.title = 'Título é obrigatório'
+        if (!form.resume) newErrors.resume = 'Resumo é obrigatório'
+        if (!form.discipline) newErrors.discipline = 'Disciplina é obrigatória'
         return newErrors
     }
 
@@ -72,7 +67,7 @@ function PlanForm({ onPlanCreated }) {
 
         client.post('/create_plan', form)
             .then(res => {
-                setSelectedPlan(res.data.plan)
+                setCreatedPlan(res.data.plan)
                 onPlanCreated?.(res.data.plan)
                 setSuccess(true)
                 setLoading(false)
@@ -85,61 +80,59 @@ function PlanForm({ onPlanCreated }) {
 
     return (
         <div className="card">
-            <h2>Novo Plano de Aula</h2>
+            <h2>✏️ Novo Plano de Aula</h2>
 
-            {success && <p>Plano criado com sucesso!</p>}
-            {errors.geral && <p>{errors.geral}</p>}
+            {success && <p className="alert alert-success">Plano criado com sucesso!</p>}
+            {errors.geral && <p className="alert alert-error">{errors.geral}</p>}
 
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label>Titulo</label>
-                    <input name="title" value={form.title} onChange={handleChange} />
-                    {errors.title && <span>{errors.title}</span>}
+                    <label>Título</label>
+                    <input name="title" value={form.title} onChange={handleChange} placeholder="Ex: Introdução à Álgebra Linear" />
+                    {errors.title && <span className="error-msg">{errors.title}</span>}
                 </div>
 
                 <div className="form-group">
                     <label>Disciplina</label>
-                    <input name="discipline" value={form.discipline} onChange={handleChange} />
-                    {errors.discipline && <span>{errors.discipline}</span>}
+                    <input name="discipline" value={form.discipline} onChange={handleChange} placeholder="Ex: Matemática" />
+                    {errors.discipline && <span className="error-msg">{errors.discipline}</span>}
                 </div>
 
                 <div className="form-group">
                     <label>Objetivo</label>
-                    <input name="objective" value={form.objective} onChange={handleChange} />
-                    {errors.objective && <span>{errors.objective}</span>}
+                    <input name="objective" value={form.objective} onChange={handleChange} placeholder="O que o aluno deve aprender?" />
                 </div>
 
                 <div className="form-group">
-                    <label>Resumo</label>
-                    <input name="resume" value={form.resume} onChange={handleChange} />
-                    {errors.resume && <span>{errors.resume}</span>}
+                    <label>Resumo / Ementa</label>
+                    <input name="resume" value={form.resume} onChange={handleChange} placeholder="Descreva brevemente o conteúdo da aula" />
+                    {errors.resume && <span className="error-msg">{errors.resume}</span>}
                 </div>
 
                 <div className="form-group">
-                    <label>Data prevista</label>
-                    <input name="pre_data" value={form.pre_data} onChange={handleChange} />
+                    <label>Data Prevista</label>
+                    <input name="pre_data" type="date" value={form.pre_data} onChange={handleChange} />
                 </div>
 
                 <div className="form-group">
-                    <label>Conteudo</label>
-                    <textarea name="content" value={form.content} onChange={handleChange} rows={10} />
+                    <label>Conteúdo</label>
+                    <textarea name="content" value={form.content} onChange={handleChange} rows={10} placeholder="Detalhamento do conteúdo da aula..." />
                 </div>
 
                 <div className="form-group">
-                    <label>Recursos</label>
-                    <input name="resources" value={form.resources} onChange={handleChange} />
+                    <label>Recursos de Apoio</label>
+                    <input name="resources" value={form.resources} onChange={handleChange} placeholder="Ex: slides, vídeos, apostilas..." />
                 </div>
 
                 <button className="btn btn-submit" type="submit" disabled={loading}>
-                    {loading ? 'Criando...' : 'Criar Plano'}
+                    {loading ? 'Criando...' : '💾 Criar Plano'}
                 </button>
 
-                {selectedPlan && (
-                    <button className="btn btn-ai" type="button" onClick={handleAi} disabled={loading}>
-                        {loading ? 'Gerando...' : 'Gerar recomendacao'}
+                {createdPlan && (
+                    <button className="btn btn-ai" type="button" onClick={handleAi} disabled={aiLoading}>
+                        {aiLoading ? '🤖 Gerando recomendações...' : '✨ Gerar Recomendações com IA'}
                     </button>
                 )}
-
             </form>
         </div>
     )
