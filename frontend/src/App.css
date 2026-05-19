@@ -206,6 +206,11 @@ body {
   margin-top: 0.5rem;
 }
 
+.btn-danger {
+  background: #E11D48;
+  color: #fff;
+}
+
 /* ── ALERTS ── */
 .alert {
   padding: 0.75rem 1rem;
@@ -326,6 +331,27 @@ body {
   font-size: 0.9rem;
   color: var(--text-muted);
   font-weight: 600;
+}
+
+.plan-detail {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--border);
+}
+
+.plan-detail h3 {
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.plan-actions {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.plan-actions .btn {
+  flex: 1;
+  justify-content: center;
 }
 
 /* ── EMPTY STATE ── */

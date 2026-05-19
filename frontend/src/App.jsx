@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import './App.css'
-import PlansPage from './pages/PlansPage';
 import PlanForm from './pages/PlanForm';
-import ChatPage from './pages/ChatPage';
+import PlansPage from './pages/PlansPage';
 
 function App() {
-  //const [selectedPlan, setSelectedPlan] = useState(null)
+  const [plansReloadKey, setPlansReloadKey] = useState(0)
+
+  function handlePlanCreated() {
+    setPlansReloadKey(key => key + 1)
+  }
 
   return (
     <div>
       <h1>Make Plan Class</h1>
-      <PlanForm />
-      {/* <PlansPage/> */}
+      <PlanForm onPlanCreated={handlePlanCreated} />
+      <PlansPage reloadKey={plansReloadKey} />
     </div>
   )
 }

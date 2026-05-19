@@ -3,127 +3,173 @@ from flask_migrate import Migrate
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 import os
+import re
+from urllib.parse import quote_plus, unquote
+
 import litellm
+import pymysql
 from litellm.exceptions import RateLimitError
 
 from modules.plan import Plan, db
-from modules.user import User
 
-# Load environment variables from .env file
+
 load_dotenv()
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+
+def get_database_config():
+    password = unquote(os.getenv('DB_PASSWORD', ''))
+
+    return {
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'port': int(os.getenv('DB_PORT', 3306)),
+        'user': os.getenv('DB_USER', 'root'),
+        'password': password,
+        'name': os.getenv('DB_NAME', 'mpc_db_no_user'),
+    }
+
+
+def build_database_uri():
+    config = get_database_config()
+    password = quote_plus(config['password'])
+
+    return (
+        f"mysql+pymysql://{config['user']}:{password}"
+        f"@{config['host']}:{config['port']}/{config['name']}"
+    )
+
+
+def ensure_database_exists():
+    config = get_database_config()
+
+    if not re.match(r'^[A-Za-z0-9_]+$', config['name']):
+        raise ValueError('DB_NAME must contain only letters, numbers, and underscores')
+
+    connection = pymysql.connect(
+        host=config['host'],
+        port=config['port'],
+        user=config['user'],
+        password=config['password'],
+        charset='utf8mb4',
+    )
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{config['name']}` "
+                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = build_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
 
-def normalize_chat_message(message):
+
+def normalize_recommendation_message(message):
     if isinstance(message, str):
         return message.strip()
 
     if isinstance(message, dict):
-        content = message.get("content")
+        content = message.get('content')
         details = []
 
         if content:
             details.append(str(content))
 
         labels = {
-            "discipline": "Disciplina",
-            "resume": "Resumo",
-            "title": "Titulo",
+            'discipline': 'Disciplina',
+            'resume': 'Resumo',
+            'title': 'Titulo',
         }
 
         for key, label in labels.items():
             value = message.get(key)
             if value:
-                details.append(f"{label}: {value}")
+                details.append(f'{label}: {value}')
 
-        return "\n".join(details).strip()
+        return '\n'.join(details).strip()
 
-    return ""
+    return ''
 
-# Health check endpoint
+
+def generate_recommendations(message):
+    response = litellm.completion(
+        model=f"{os.getenv('LLM_OPENAI')}/{os.getenv('LLM_MODEL_OPENAI')}",
+        messages=[
+            {
+                'role': 'system',
+                'content': [
+                    {
+                        'type': 'text',
+                        'text': (
+                            'Assistente pedagogico. Gere sugestoes de conteudos '
+                            'complementares, topicos relacionados e 3 tags recomendadas.'
+                        ),
+                    }
+                ],
+            },
+            {
+                'role': 'user',
+                'content': [{'type': 'text', 'text': message}],
+            },
+        ],
+        # max_tokens=int(os.getenv('LLM_MAX_TOKENS', 500)),
+    )
+
+    choice = response['choices'][0] if isinstance(response, dict) else response.choices[0]
+    response_message = choice['message'] if isinstance(choice, dict) else choice.message
+    return response_message['content'] if isinstance(response_message, dict) else response_message.content
+
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'healthy'}), 200
 
-# Home route
+
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({'message': 'Make-Plan-Class API'}), 200
 
-@app.route("/users/<int:user_id>/plans/<string:title>/chat", methods=["POST"])
-def chat(user_id, title):
-    plan = Plan.query.filter_by(user_id=user_id, title=title).first()
+
+@app.route('/recommendations', methods=['GET'])
+def recommendations():
+    data = request.get_json(silent=True) or {}
+    title = data.get('title') or request.args.get('title')
+
+    if not title:
+        return jsonify({'error': 'title is required'}), 400
+
+    plan = Plan.query.filter_by(title=title).first()
 
     if not plan:
-        return jsonify({"error": "Plan not found"}), 404
+        return jsonify({'error': 'Plan not found'}), 404
 
-    data = request.get_json(silent=True) or {}
-    mensagem = normalize_chat_message(data.get("message"))
-
-    if not mensagem:
-        return jsonify({"error": "No message provided"}), 400
-
-    # Adiciona a mensagem do usuÃ¡rio ao histÃ³rico
-    plan.add_history(f"user: {mensagem}")
-    historico = [
-        {
-            "role": "user",
-            "content": [{"type": "text", "text": mensagem}]
-        }
-    ]
+    message = normalize_recommendation_message({
+        'title': plan.title,
+        'discipline': plan.discipline,
+        'resume': plan.resume,
+    })
 
     try:
-        response = litellm.completion(
-            model=f"{os.getenv('LLM_OPENAI')}/{os.getenv('LLM_MODEL_OPENAI')}",
-            messages=[
-                {
-                    "role": "system",
-                    "content": [{"type": "text", "text": "Assistente Pedagogico. Fazendo o seguinte: sugestões de conteúdos complementares, tópicos relacionados e 3 tags recomendadas."}]
-                },
-                *historico
-            ],
-            #max_tokens=int(os.getenv('LLM_MAX_TOKENS', 500)),
-        )
+        response = generate_recommendations(message)
     except RateLimitError:
-        return jsonify({"error": "LLM quota exceeded. Check your OpenAI billing/quota."}), 429
+        return jsonify({'error': 'LLM quota exceeded. Check your OpenAI billing/quota.'}), 429
     except Exception as exc:
-        return jsonify({"error": "Failed to call LLM", "details": str(exc)}), 500
+        return jsonify({'error': 'Failed to call LLM', 'details': str(exc)}), 500
 
-    choice = response["choices"][0] if isinstance(response, dict) else response.choices[0]
-    message = choice["message"] if isinstance(choice, dict) else choice.message
-    resposta = message["content"] if isinstance(message, dict) else message.content
-    plan.set_content(resposta)
-    # Adiciona a resposta da IA ao histÃ³rico
-    historico.append({"role": "assistant", "content": resposta})
-    plan.add_history(f"assistant: {resposta}")
+    plan.set_content(response)
+    plan.add_history(f'recommendations: {response}')
 
-    return jsonify({"response": resposta})
+    return jsonify({'response': response, 'plan': plan.to_dict()}), 200
 
-@app.route('/create_user', methods=['POST'])
-def create_user():
-    data = request.get_json(silent=True) or {}
-
-    if not data.get('username'):
-        return jsonify({'error': 'username is required'}), 400
-    
-    user = User(username=data['username'])
-    
-    try:
-        db.session.add(user)
-        db.session.commit()
-    except SQLAlchemyError as exc:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to create user', 'details': str(exc)}), 500
-    
-    return jsonify({'message': 'User created successfully', 'user': {'user_id': user.user_id, 'username': user.username}}), 201
 
 @app.route('/create_plan', methods=['POST'])
 def create_plan():
@@ -131,35 +177,26 @@ def create_plan():
 
     if not data.get('title'):
         return jsonify({'error': 'title is required'}), 400
-    
+
     plan = Plan(
-        user_id=data['user_id'],
         title=data['title'],
-        objective=data['objective'],
-        resume=data['resume'],
-        pre_data=data['pre_data'],
-        discipline=data['discipline'],
-        content=data['content'],
-        resources=data['resources'],
+        objective=data.get('objective', ''),
+        resume=data.get('resume', ''),
+        pre_data=data.get('pre_data', ''),
+        discipline=data.get('discipline', ''),
+        content=data.get('content', ''),
+        resources=data.get('resources', ''),
     )
-    
+
     try:
         db.session.add(plan)
         db.session.commit()
     except SQLAlchemyError as exc:
         db.session.rollback()
         return jsonify({'error': 'Failed to create plan', 'details': str(exc)}), 500
-    
+
     return jsonify({'message': 'Plan created successfully', 'plan': plan.to_dict()}), 201
 
-@app.route('/users', methods=['GET'])
-def get_users():
-    try:
-        users = User.query.all()
-        result = [{'user_id': user.user_id, 'username': user.username} for user in users]
-        return jsonify({'users': result}), 200
-    except SQLAlchemyError as exc:
-        return jsonify({'error': 'Failed to list users', 'details': str(exc)}), 500
 
 @app.route('/plans', methods=['GET'])
 def get_plans():
@@ -170,31 +207,76 @@ def get_plans():
     except SQLAlchemyError as exc:
         return jsonify({'error': 'Failed to list plans', 'details': str(exc)}), 500
 
-@app.route('/user/<int:user_id>/plans', methods=['GET'])
-def get_user_plans(user_id):
-    try:
-        plans = Plan.query.filter_by(user_id=user_id).all()
-        result = [plan.to_dict() for plan in plans]
-        return jsonify({'plans': result}), 200
-    except SQLAlchemyError as exc:
-        return jsonify({'error': 'Failed to list user plans', 'details': str(exc)}), 500
 
-@app.route('/users/<int:user_id>/plans/<string:title>', methods=['GET'])
-def get_user_plan_by_title(user_id, title):
-    plan = Plan.query.filter_by(user_id=user_id, title=title).first()
+@app.route('/plans/<int:plan_id>', methods=['GET'])
+def get_plan(plan_id):
+    plan = db.session.get(Plan, plan_id)
 
     if not plan:
         return jsonify({'error': 'Plan not found'}), 404
 
     return jsonify({'plan': plan.to_dict()}), 200
 
+
+@app.route('/plans/<int:plan_id>', methods=['PUT'])
+def update_plan(plan_id):
+    plan = db.session.get(Plan, plan_id)
+
+    if not plan:
+        return jsonify({'error': 'Plan not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+
+    if 'title' in data and not data.get('title'):
+        return jsonify({'error': 'title cannot be empty'}), 400
+
+    editable_fields = [
+        'title',
+        'objective',
+        'resume',
+        'pre_data',
+        'discipline',
+        'content',
+        'resources',
+    ]
+
+    for field in editable_fields:
+        if field in data:
+            setattr(plan, field, data.get(field) or '')
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update plan', 'details': str(exc)}), 500
+
+    return jsonify({'message': 'Plan updated successfully', 'plan': plan.to_dict()}), 200
+
+
+@app.route('/plans/<string:title>', methods=['DELETE'])
+def delete_plan(title):
+    plan = Plan.query.filter_by(title=title).first()
+
+    if not plan:
+        return jsonify({'error': 'Plan not found'}), 404
+
+    try:
+        db.session.delete(plan)
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete plan', 'details': str(exc)}), 500
+
+    return jsonify({'message': 'Plan deleted successfully'}), 200
+
+
 if __name__ == '__main__':
-    # Inicializar banco de dados e tabelas
-    with app.app_context():
-        try:
+    try:
+        ensure_database_exists()
+        with app.app_context():
             db.create_all()
-            print('Database tables initialized.')
-        except Exception as exc:
-            print(f'Database initialization failed: {exc}')
-    
+        print('Database tables initialized.')
+    except Exception as exc:
+        print(f'Database initialization failed: {exc}')
+
     app.run(debug=True, host='0.0.0.0', port=5000)

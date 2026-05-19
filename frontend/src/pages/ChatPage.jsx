@@ -16,13 +16,9 @@ function ChatPage({ plan}) {
         setLoading(true)
         setErro(null)
 
-        client.post(`users/${plan.user_id}/plans/${plan.title}/chat`, {
-            message: {
-                discipline: plan.discipline,
-                resume: plan.resume,
-                title: plan.title,
-                user_id: plan.user_id,
-            }
+        client.get('/recommendations', {
+            data: { title: plan.title },
+            params: { title: plan.title },
         })
             .then(res => {
                 const aiMessage = { role: 'assistant', content: res.data.response}

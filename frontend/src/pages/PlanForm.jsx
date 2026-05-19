@@ -1,9 +1,8 @@
-import { useState} from 'react'
+import { useState } from 'react'
 import client from '../api/client'
 
-function PlanForm() {
+function PlanForm({ onPlanCreated }) {
     const [form, setForm] = useState({
-        user_id: '',
         title: '',
         objective: '',
         resume: '',
@@ -16,39 +15,44 @@ function PlanForm() {
     const [errors, setErrors] = useState({})
     const [success, setSuccess] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [selectedPlan, setSelectedPlan] = useState(null)
 
-    function handleChange(e){
-        setForm({ ...form, [e.target.name]: e.target.value})
+    function handleChange(e) {
+        setForm({ ...form, [e.target.name]: e.target.value })
     }
 
-    function handleAi(){
+    function handleAi() {
+        if (!selectedPlan) {
+            setErrors({ geral: 'Crie um plano antes de gerar recomendacoes.' })
+            return
+        }
+
+        setErrors({})
         setLoading(true)
 
-        client.post(`/users/${form.user_id}/plans/${form.title}/chat`, {
-            message: {
-                discipline: form.discipline,
-                resume: form.resume,
-                title: form.title,
-                user_id: form.user_id,
-            }
+        client.get('/recommendations', {
+            data: { title: selectedPlan.title },
+            params: { title: selectedPlan.title },
         })
-        .then(res => {
-            setForm(prev => ({ ...prev, content: res.data.response }))
-            setLoading(false)
-        })
-        .catch(() => {
-            setErrors({ geral:'Erro ao gerar recomendações.'})
-            setLoading(false)
-        })
+            .then(res => {
+                const updatedPlan = res.data.plan
+
+                setSelectedPlan(updatedPlan)
+                setForm(prev => ({ ...prev, content: updatedPlan.content }))
+                setLoading(false)
+            })
+            .catch(() => {
+                setErrors({ geral: 'Erro ao gerar recomendacoes.' })
+                setLoading(false)
+            })
     }
 
     function validate() {
         const newErrors = {}
 
-        if (!form.user_id) newErrors.user_id = 'Usuário é obrigatório'
-        if (!form.title) newErrors.title = 'Título é obrigatório'
-        if (!form.resume) newErrors.resume = 'Resumo é obrigatório'
-        if (!form.discipline) newErrors.discipline = 'Disciplina é obrigatória'
+        if (!form.title) newErrors.title = 'Titulo e obrigatorio'
+        if (!form.resume) newErrors.resume = 'Resumo e obrigatorio'
+        if (!form.discipline) newErrors.discipline = 'Disciplina e obrigatoria'
 
         return newErrors
     }
@@ -64,21 +68,14 @@ function PlanForm() {
 
         setErrors({})
         setLoading(true)
+        setSuccess(false)
 
         client.post('/create_plan', form)
-            .then(() => {
+            .then(res => {
+                setSelectedPlan(res.data.plan)
+                onPlanCreated?.(res.data.plan)
                 setSuccess(true)
                 setLoading(false)
-                setForm({
-                    user_id: '',
-                    title: '',
-                    objective: '',
-                    resume: '',
-                    pre_data: '',
-                    discipline: '',
-                    content: '',
-                    resources: '',
-                })
             })
             .catch(() => {
                 setErrors({ geral: 'Erro ao criar plano. Tente novamente.' })
@@ -92,17 +89,11 @@ function PlanForm() {
 
             {success && <p>Plano criado com sucesso!</p>}
             {errors.geral && <p>{errors.geral}</p>}
+            {selectedPlan && <p>Plano selecionado: {selectedPlan.title}</p>}
 
             <form onSubmit={handleSubmit}>
-
                 <div className="form-group">
-                    <label>User ID</label>
-                    <input name="user_id" value={form.user_id} onChange={handleChange} />
-                    {errors.user_id && <span>{errors.user_id}</span>}
-                </div>
-
-                <div className="form-group">
-                    <label>Título</label>
+                    <label>Titulo</label>
                     <input name="title" value={form.title} onChange={handleChange} />
                     {errors.title && <span>{errors.title}</span>}
                 </div>
@@ -125,18 +116,14 @@ function PlanForm() {
                     {errors.resume && <span>{errors.resume}</span>}
                 </div>
 
-                <button className="btn btn-ai" type="button" onClick={handleAi} disabled={loading}>
-                    {loading ? 'Gerando...' : 'Gerar Recomendações com IA'}
-                </button>
-
                 <div className="form-group">
                     <label>Data prevista</label>
                     <input name="pre_data" value={form.pre_data} onChange={handleChange} />
                 </div>
 
                 <div className="form-group">
-                    <label>Conteúdo</label>
-                    <textarea name="content" value={form.content}onChange={handleChange} rows={10}/>
+                    <label>Conteudo</label>
+                    <textarea name="content" value={form.content} onChange={handleChange} rows={10} />
                 </div>
 
                 <div className="form-group">
@@ -148,10 +135,15 @@ function PlanForm() {
                     {loading ? 'Criando...' : 'Criar Plano'}
                 </button>
 
+                {selectedPlan && (
+                    <button className="btn btn-ai" type="button" onClick={handleAi} disabled={loading}>
+                        {loading ? 'Gerando...' : 'Gerar recomendacao'}
+                    </button>
+                )}
+
             </form>
         </div>
     )
-
 }
 
 export default PlanForm

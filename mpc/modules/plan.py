@@ -8,11 +8,10 @@ db = SQLAlchemy()
 class Plan(db.Model):
     __tablename__ = 'plans'
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'title', name='unique_user_plan_title'),
+        db.UniqueConstraint('title', name='unique_plan_title'),
     )
     
     plan_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=True)
     title = db.Column(db.String(255), nullable=False)
     objective = db.Column(db.String(255))
     resume = db.Column(db.Text)
@@ -24,8 +23,7 @@ class Plan(db.Model):
 
     def __init__(self, title: str, objective: str = "",
                  resume: str = "", pre_data: str = "", discipline: str = "",
-                 content: str = "", resources: str = "", user_id: int = None):
-        self.user_id = user_id
+                 content: str = "", resources: str = ""):
         self.title = title
         self.objective = objective
         self.resume = resume
@@ -71,12 +69,11 @@ class Plan(db.Model):
         db.session.commit()
     
     def __str__(self):
-        return f"Plan(id={self.plan_id}, user_id={self.user_id}, title='{self.title}', objective='{self.objective}')"
+        return f"Plan(id={self.plan_id}, title='{self.title}', objective='{self.objective}')"
 
     def to_dict(self):
         return {
             'plan_id': self.plan_id,
-            'user_id': self.user_id,
             'title': self.title,
             'objective': self.objective,
             'resume': self.resume,

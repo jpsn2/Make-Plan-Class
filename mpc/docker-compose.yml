@@ -12,8 +12,8 @@ services:
       DB_PORT: ${DB_PORT:-3306}
       DB_USER: ${DB_USER:-mpc_user}
       DB_PASSWORD: ${DB_PASSWORD:-mpc_password}
-      DB_NAME: ${DB_NAME:-mpc_db}
-      DATABASE_URL: mysql+pymysql://${DB_USER:-mpc_user}:${DB_PASSWORD:-mpc_password}@${DB_HOST:-host.docker.internal}:${DB_PORT:-3306}/${DB_NAME:-mpc_db}
+      DB_NAME: ${DB_NAME:-mpc_db_no_user}
+      DATABASE_URL: mysql+pymysql://${DB_USER:-mpc_user}:${DB_PASSWORD:-mpc_password}@${DB_HOST:-host.docker.internal}:${DB_PORT:-3306}/${DB_NAME:-mpc_db_no_user}
     ports:
       - "5000:5000"
     volumes:
