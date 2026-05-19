@@ -121,7 +121,7 @@ def generate_recommendations(message):
                 'content': [{'type': 'text', 'text': message}],
             },
         ],
-        # max_tokens=int(os.getenv('LLM_MAX_TOKENS', 500)),
+        max_tokens=int(os.getenv('LLM_MAX_TOKENS', 500)),
     )
 
     choice = response['choices'][0] if isinstance(response, dict) else response.choices[0]
