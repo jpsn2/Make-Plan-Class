@@ -101,6 +101,8 @@ LLM_MODEL_OPENAI=gpt-4o-mini
 
 **3. Suba o backend e o banco com Docker**
 
+⚠️⚠️⚠️ **ATENÇÃO!!!** Existem dois docker-compose originalmente, um para desenvolvimento e outro para produção. O comando abaixo sobe o ambiente de desenvolvimento, que é o recomendado para testes locais.
+
 ```bash
 docker-compose up --build
 ```
