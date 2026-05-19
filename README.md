@@ -101,15 +101,12 @@ LLM_MODEL_OPENAI=gpt-4o-mini
 
 **3. Suba o backend e o banco com Docker**
 
-⚠️⚠️⚠️ **ATENÇÃO!!!** Existem dois docker-compose originalmente, um para desenvolvimento e outro para produção. O comando abaixo sobe o ambiente de desenvolvimento, que é o recomendado para testes locais.
-
 ```bash
 docker-compose up --build
 ```
 
 O Docker vai:
 - Criar e iniciar o container do MySQL(NO DOCKER COMPOSE DE PRODUÇÃO)
-- No DOCKER COMPOSE DE DESENVOLVIMENTO, o banco é local, então o Docker só sobe o backend
 - Aguardar o banco ficar pronto
 - Construir e iniciar o container do Flask
 
