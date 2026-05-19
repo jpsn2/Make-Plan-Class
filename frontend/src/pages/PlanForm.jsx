@@ -89,7 +89,6 @@ function PlanForm({ onPlanCreated }) {
 
             {success && <p>Plano criado com sucesso!</p>}
             {errors.geral && <p>{errors.geral}</p>}
-            {selectedPlan && <p>Plano selecionado: {selectedPlan.title}</p>}
 
             <form onSubmit={handleSubmit}>
                 <div className="form-group">

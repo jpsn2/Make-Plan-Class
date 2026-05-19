@@ -116,6 +116,32 @@ function PlansPage({ reloadKey }) {
             })
     }
 
+    function handleAi() {
+        if (!selectedPlan) {
+            setErro({ geral: 'Crie um plano antes de gerar recomendacoes.' })
+            return
+        }
+
+        setErro({})
+        setLoading(true)
+
+        client.get('/recommendations', {
+            data: { title: selectedPlan.title },
+            params: { title: selectedPlan.title },
+        })
+            .then(res => {
+                const updatedPlan = res.data.plan
+
+                setSelectedPlan(updatedPlan)
+                setPage(prev => ({ ...prev, content: updatedPlan.content }))
+                setLoading(false)
+            })
+            .catch(() => {
+                setErro({ geral: 'Erro ao gerar recomendacoes.' })
+                setLoading(false)
+            })
+    }
+
     const filteredPlans = plans.filter(plan =>
         plan.title.toLowerCase().includes(filter.toLowerCase())
     )
@@ -184,7 +210,6 @@ function PlansPage({ reloadKey }) {
 
             {selectedPlan && (
                 <div className="plan-detail">
-                    <h3>Plano selecionado</h3>
 
                     <div className="form-group">
                         <label>Titulo</label>
@@ -220,6 +245,12 @@ function PlansPage({ reloadKey }) {
                         <label>Recursos</label>
                         <input name="resources" value={form.resources} onChange={handleChange} />
                     </div>
+                    
+                    {selectedPlan && (
+                        <button className="btn btn-ai" type="button" onClick={handleAi} disabled={loading}>
+                            {loading ? 'Gerando...' : 'Gerar outra recomendação'}
+                        </button>
+                        )}
 
                     <div className="plan-actions">
                         <button className="btn btn-primary" type="button" onClick={handleUpdate} disabled={saving}>
