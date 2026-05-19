@@ -87,7 +87,7 @@ function PlanForm() {
     }
 
     return (
-        <div>
+        <div className="card">
             <h2>Novo Plano de Aula</h2>
 
             {success && <p>Plano criado com sucesso!</p>}
@@ -95,56 +95,56 @@ function PlanForm() {
 
             <form onSubmit={handleSubmit}>
 
-                <div>
+                <div className="form-group">
                     <label>User ID</label>
                     <input name="user_id" value={form.user_id} onChange={handleChange} />
                     {errors.user_id && <span>{errors.user_id}</span>}
                 </div>
 
-                <div>
+                <div className="form-group">
                     <label>Título</label>
                     <input name="title" value={form.title} onChange={handleChange} />
                     {errors.title && <span>{errors.title}</span>}
                 </div>
 
-                <div>
+                <div className="form-group">
                     <label>Disciplina</label>
                     <input name="discipline" value={form.discipline} onChange={handleChange} />
                     {errors.discipline && <span>{errors.discipline}</span>}
                 </div>
 
-                <div>
+                <div className="form-group">
                     <label>Objetivo</label>
                     <input name="objective" value={form.objective} onChange={handleChange} />
                     {errors.objective && <span>{errors.objective}</span>}
                 </div>
 
-                <div>
+                <div className="form-group">
                     <label>Resumo</label>
                     <input name="resume" value={form.resume} onChange={handleChange} />
                     {errors.resume && <span>{errors.resume}</span>}
                 </div>
 
-                <button type="button" onClick={handleAi} disabled={loading}>
+                <button className="btn btn-ai" type="button" onClick={handleAi} disabled={loading}>
                     {loading ? 'Gerando...' : 'Gerar Recomendações com IA'}
                 </button>
 
-                <div>
+                <div className="form-group">
                     <label>Data prevista</label>
                     <input name="pre_data" value={form.pre_data} onChange={handleChange} />
                 </div>
 
-                <div>
+                <div className="form-group">
                     <label>Conteúdo</label>
                     <textarea name="content" value={form.content}onChange={handleChange} rows={10}/>
                 </div>
 
-                <div>
+                <div className="form-group">
                     <label>Recursos</label>
                     <input name="resources" value={form.resources} onChange={handleChange} />
                 </div>
 
-                <button type="submit" disabled={loading}>
+                <button className="btn btn-submit" type="submit" disabled={loading}>
                     {loading ? 'Criando...' : 'Criar Plano'}
                 </button>
 
