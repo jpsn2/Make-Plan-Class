@@ -108,7 +108,8 @@ docker-compose up --build
 ```
 
 O Docker vai:
-- Criar e iniciar o container do MySQL
+- Criar e iniciar o container do MySQL(NO DOCKER COMPOSE DE PRODUÇÃO)
+- No DOCKER COMPOSE DE DESENVOLVIMENTO, o banco é local, então o Docker só sobe o backend
 - Aguardar o banco ficar pronto
 - Construir e iniciar o container do Flask
 
