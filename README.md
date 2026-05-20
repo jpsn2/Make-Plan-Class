@@ -13,7 +13,7 @@
 
 ## 🎯 Sobre o Projeto
 
-[▶ Assistir ao vídeo]([https://drive.google.com/file/d/SEU_FILE_ID/view](https://drive.google.com/file/d/1mVyhqt_XwMxMDuDrqLbyZ_nNCVmHr2L5/view?usp=sharing))
+[▶ Assistir ao vídeo](https://youtu.be/ByILJzf7Nmk)
 
 O **Make Plan Class** é uma aplicação web para criação e gerenciamento de planos de aula. Com o recurso **Smart Assist**, o docente preenche título, disciplina e resumo da aula e, com um clique, recebe sugestões de conteúdos complementares, tópicos relacionados e tags geradas por IA.
 
